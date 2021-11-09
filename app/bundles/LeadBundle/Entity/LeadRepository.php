@@ -495,41 +495,44 @@ class LeadRepository extends CommonRepository implements CustomFieldRepositoryIn
                 $dncRules      = $dncRepository->getChannelList(null, $contactIds);
             }
 
-            foreach ($contactIds as $id) {
-                if ($withCompanies && isset($companies[$id]) && !empty($companies[$id])) {
-                    $primary = null;
+            if ($withCompanies || $withPreferences) {
+                foreach ($contactIds as $id) {
+                    if ($withCompanies && isset($companies[$id]) && !empty($companies[$id])) {
+                        $primary = null;
 
-                    // Try to find the primary company
-                    foreach ($companies[$id] as $company) {
-                        if (1 == $company['is_primary']) {
-                            $primary = $company;
+                        // Try to find the primary company
+                        foreach ($companies[$id] as $company) {
+                            if (1 == $company['is_primary']) {
+                                $primary = $company;
+                            }
+                        }
+
+                        // If no primary was found, just grab the first
+                        if (empty($primary)) {
+                            $primary = $companies[$id][0];
+                        }
+
+                        if (is_array($tmpContacts[$id])) {
+                            $tmpContacts[$id]['primaryCompany'] = $primary;
+                        } elseif ($tmpContacts[$id] instanceof Lead) {
+                            $tmpContacts[$id]->setPrimaryCompany($primary);
                         }
                     }
 
-                    // If no primary was found, just grab the first
-                    if (empty($primary)) {
-                        $primary = $companies[$id][0];
-                    }
+                    if ($withPreferences) {
+                        $contactFrequencyRules = (isset($frequencyRules[$id])) ? $frequencyRules[$id] : [];
+                        $contactDncRules       = (isset($dncRules[$id])) ? $dncRules[$id] : [];
 
-                    if (is_array($tmpContacts[$id])) {
-                        $tmpContacts[$id]['primaryCompany'] = $primary;
-                    } elseif ($tmpContacts[$id] instanceof Lead) {
-                        $tmpContacts[$id]->setPrimaryCompany($primary);
-                    }
-                }
-
-                if ($withPreferences) {
-                    $contactFrequencyRules = (isset($frequencyRules[$id])) ? $frequencyRules[$id] : [];
-                    $contactDncRules       = (isset($dncRules[$id])) ? $dncRules[$id] : [];
-
-                    $channelRules = Lead::generateChannelRules($contactFrequencyRules, $contactDncRules);
-                    if (is_array($tmpContacts[$id])) {
-                        $tmpContacts[$id]['channelRules'] = $channelRules;
-                    } elseif ($tmpContacts[$id] instanceof Lead) {
-                        $tmpContacts[$id]->setChannelRules($channelRules);
+                        $channelRules = Lead::generateChannelRules($contactFrequencyRules, $contactDncRules);
+                        if (is_array($tmpContacts[$id])) {
+                            $tmpContacts[$id]['channelRules'] = $channelRules;
+                        } elseif ($tmpContacts[$id] instanceof Lead) {
+                            $tmpContacts[$id]->setChannelRules($channelRules);
+                        }
                     }
                 }
             }
+            
 
             if ($withTotalCount) {
                 $contacts['results'] = $tmpContacts;
