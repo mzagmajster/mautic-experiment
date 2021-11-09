@@ -114,16 +114,31 @@ trait CustomFieldRepositoryTrait
 
                 // This "hack" is in place to allow for custom ordering in the API.
                 // See https://github.com/mautic/mautic/pull/7494#issuecomment-600970208
-                $order = '(CASE';
-                foreach ($ids as $count => $id) {
-                    $order .= ' WHEN '.$this->getTableAlias().'.id = '.$id.' THEN '.$count;
-                    ++$count;
+                $order = '';
+                if ('company' == $object) {
+                    $order = '(CASE';
+                    foreach ($ids as $count => $id) {
+                        $order .= ' WHEN '.$this->getTableAlias().'.id = '.$id.' THEN '.$count;
+                        ++$count;
+                    }
+                    $order .= ' ELSE '.$count.' END) AS HIDDEN ORD';
                 }
-                $order .= ' ELSE '.$count.' END) AS HIDDEN ORD';
 
                 //ORM - generates lead entities
                 /** @var \Doctrine\ORM\QueryBuilder $q */
-                $q = $this->getEntitiesOrmQueryBuilder($order);
+                if ('lead' == $object) {
+                    $alias = $this->getTableAlias();
+                    $q     = $this->getEntityManager()->createQueryBuilder();
+                    $q->select($alias.', u, i')
+                        ->from('MauticLeadBundle:Lead', $alias, $alias.'.id')
+                        ->leftJoin($alias.'.ipAddresses', 'i')
+                        ->leftJoin($alias.'.owner', 'u')
+                        ->indexBy($alias, $alias.'.id');
+                } else {
+                    // company
+                    $q = $this->getEntitiesOrmQueryBuilder($order);
+                }
+
                 $this->buildSelectClause($dq, $args);
 
                 //only pull the leads as filtered via DBAL
@@ -131,7 +146,9 @@ trait CustomFieldRepositoryTrait
                     $q->expr()->in($this->getTableAlias().'.id', ':entityIds')
                 )->setParameter('entityIds', $ids);
 
-                $q->orderBy('ORD', 'ASC');
+                if (!empty($order)) {
+                    $q->orderBy('ORD', 'ASC');
+                }
 
                 $results = $q->getQuery()
                     ->useQueryCache(false) // the query contains ID's, so there is no use in caching it
