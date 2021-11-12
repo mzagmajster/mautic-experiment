@@ -54,118 +54,118 @@ trait CustomFieldRepositoryTrait
             $dq->resetQueryPart('groupBy');
         }
 
-        //get a total count
-        $result = $dq->execute()->fetchAll();
-        $total  = ($result) ? $result[0]['count'] : 0;
+        $total = 0;
+        $results = [];
 
-        if (!$total) {
-            $results = [];
-        } else {
-            if ($groupBy) {
-                $dq->groupBy($groupBy);
-            }
-            //now get the actual paginated results
+        //get a total count if requested.
+        if ($args['withTotalCount']) {
+            $result = $dq->execute()->fetchAll();
+            $total  = ($result) ? $result[0]['count'] : 0;
+        }
+        
+        if ($groupBy) {
+            $dq->groupBy($groupBy);
+        }
+        //now get the actual paginated results
 
-            $this->buildOrderByClause($dq, $args);
-            $this->buildLimiterClauses($dq, $args);
+        $this->buildOrderByClause($dq, $args);
+        $this->buildLimiterClauses($dq, $args);
 
-            $dq->resetQueryPart('select');
-            $this->buildSelectClause($dq, $args);
+        $dq->resetQueryPart('select');
+        $this->buildSelectClause($dq, $args);
 
-            $results = $dq->execute()->fetchAll();
+        $results = $dq->execute()->fetchAll();
 
-            //loop over results to put fields in something that can be assigned to the entities
-            $fieldValues = [];
-            $groups      = $this->getFieldGroups();
+        //loop over results to put fields in something that can be assigned to the entities
+        $fieldValues = [];
+        $groups      = $this->getFieldGroups();
 
-            foreach ($results as $result) {
-                $id = $result['id'];
-                //unset all the columns that are not fields
-                $this->removeNonFieldColumns($result, $fixedFields);
+        foreach ($results as $result) {
+            $id = $result['id'];
+            //unset all the columns that are not fields
+            $this->removeNonFieldColumns($result, $fixedFields);
 
-                foreach ($result as $k => $r) {
-                    if (isset($fields[$k])) {
-                        $fieldValues[$id][$fields[$k]['group']][$fields[$k]['alias']]          = $fields[$k];
-                        $fieldValues[$id][$fields[$k]['group']][$fields[$k]['alias']]['value'] = $r;
-                    }
-                }
-
-                //make sure each group key is present
-                foreach ($groups as $g) {
-                    if (!isset($fieldValues[$id][$g])) {
-                        $fieldValues[$id][$g] = [];
-                    }
+            foreach ($result as $k => $r) {
+                if (isset($fields[$k])) {
+                    $fieldValues[$id][$fields[$k]['group']][$fields[$k]['alias']]          = $fields[$k];
+                    $fieldValues[$id][$fields[$k]['group']][$fields[$k]['alias']]['value'] = $r;
                 }
             }
 
-            unset($results, $fields);
-
-            //get an array of IDs for ORM query
-            $ids = array_keys($fieldValues);
-
-            if (count($ids)) {
-                //ORM
-
-                //build the order by id since the order was applied above
-                //unfortunately, doctrine does not have a way to natively support this and can't use MySQL's FIELD function
-                //since we have to be cross-platform; it's way ugly
-
-                //We should probably totally ditch orm for leads
-
-                // This "hack" is in place to allow for custom ordering in the API.
-                // See https://github.com/mautic/mautic/pull/7494#issuecomment-600970208
-                $order = '';
-                if ('company' == $object) {
-                    $order = '(CASE';
-                    foreach ($ids as $count => $id) {
-                        $order .= ' WHEN '.$this->getTableAlias().'.id = '.$id.' THEN '.$count;
-                        ++$count;
-                    }
-                    $order .= ' ELSE '.$count.' END) AS HIDDEN ORD';
+            //make sure each group key is present
+            foreach ($groups as $g) {
+                if (!isset($fieldValues[$id][$g])) {
+                    $fieldValues[$id][$g] = [];
                 }
+            }
+        }
 
-                //ORM - generates lead entities
-                /** @var \Doctrine\ORM\QueryBuilder $q */
-                if ('lead' == $object) {
-                    $alias = $this->getTableAlias();
-                    $q     = $this->getEntityManager()->createQueryBuilder();
-                    $q->select($alias.', u, i')
-                        ->from('MauticLeadBundle:Lead', $alias, $alias.'.id')
-                        ->leftJoin($alias.'.ipAddresses', 'i')
-                        ->leftJoin($alias.'.owner', 'u')
-                        ->indexBy($alias, $alias.'.id');
-                } else {
-                    // company
-                    $q = $this->getEntitiesOrmQueryBuilder($order);
+        unset($results, $fields);
+
+        //get an array of IDs for ORM query
+        $ids = array_keys($fieldValues);
+
+        if (count($ids)) {
+            //ORM
+
+            //build the order by id since the order was applied above
+            //unfortunately, doctrine does not have a way to natively support this and can't use MySQL's FIELD function
+            //since we have to be cross-platform; it's way ugly
+
+            //We should probably totally ditch orm for leads
+
+            // This "hack" is in place to allow for custom ordering in the API.
+            // See https://github.com/mautic/mautic/pull/7494#issuecomment-600970208
+            $order = '';
+            if ('company' == $object) {
+                $order = '(CASE';
+                foreach ($ids as $count => $id) {
+                    $order .= ' WHEN '.$this->getTableAlias().'.id = '.$id.' THEN '.$count;
+                    ++$count;
                 }
+                $order .= ' ELSE '.$count.' END) AS HIDDEN ORD';
+            }
 
-                $this->buildSelectClause($dq, $args);
-
-                //only pull the leads as filtered via DBAL
-                $q->where(
-                    $q->expr()->in($this->getTableAlias().'.id', ':entityIds')
-                )->setParameter('entityIds', $ids);
-
-                if (!empty($order)) {
-                    $q->orderBy('ORD', 'ASC');
-                }
-
-                $results = $q->getQuery()
-                    ->useQueryCache(false) // the query contains ID's, so there is no use in caching it
-                    ->getResult();
-
-                //assign fields
-                /** @var Lead $r */
-                foreach ($results as $r) {
-                    $id = $r->getId();
-                    $r->setFields($fieldValues[$id]);
-
-                    if (is_callable($resultsCallback)) {
-                        $resultsCallback($r);
-                    }
-                }
+            //ORM - generates lead entities
+            /** @var \Doctrine\ORM\QueryBuilder $q */
+            if ('lead' == $object) {
+                $alias = $this->getTableAlias();
+                $q     = $this->getEntityManager()->createQueryBuilder();
+                $q->select($alias.', u, i')
+                    ->from('MauticLeadBundle:Lead', $alias, $alias.'.id')
+                    ->leftJoin($alias.'.ipAddresses', 'i')
+                    ->leftJoin($alias.'.owner', 'u')
+                    ->indexBy($alias, $alias.'.id');
             } else {
-                $results = [];
+                // company
+                $q = $this->getEntitiesOrmQueryBuilder($order);
+            }
+
+            // This has no meaning here since we are not using parmeters later.
+            //$this->buildSelectClause($dq, $args);
+
+            //only pull the leads as filtered via DBAL
+            $q->where(
+                $q->expr()->in($this->getTableAlias().'.id', ':entityIds')
+            )->setParameter('entityIds', $ids);
+
+            if (!empty($order)) {
+                $q->orderBy('ORD', 'ASC');
+            }
+
+            $results = $q->getQuery()
+                ->useQueryCache(false) // the query contains ID's, so there is no use in caching it
+                ->getResult();
+
+            //assign fields
+            /** @var Lead $r */
+            foreach ($results as $r) {
+                $id = $r->getId();
+                $r->setFields($fieldValues[$id]);
+
+                if (is_callable($resultsCallback)) {
+                    $resultsCallback($r);
+                }
             }
         }
 
