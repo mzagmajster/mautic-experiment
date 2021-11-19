@@ -82,14 +82,13 @@ class EmailGraphStatsController extends Controller
             );
         }
 
-        /*$statsDevices = $model->getEmailDeviceStats(
+        $statsDevices = $model->getEmailDeviceStats(
             $email,
             $includeVariants,
             $dateFromObject,
             $dateToObject
-        );*/
+        );
 
-        $statsDevices = [];  // We try to speed up page load.
         return $this->render(
             'MauticEmailBundle:Email:graph.html.php',
             [
