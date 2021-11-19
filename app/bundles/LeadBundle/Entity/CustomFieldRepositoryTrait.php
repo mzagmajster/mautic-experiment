@@ -58,7 +58,7 @@ trait CustomFieldRepositoryTrait
         $results = [];
 
         //get a total count if requested.
-        if ($args['withTotalCount']) {
+        if (isset($args['withTotalCount']) && $args['withTotalCount']) {
             $result = $dq->execute()->fetchAll();
             $total  = ($result) ? $result[0]['count'] : 0;
         }
