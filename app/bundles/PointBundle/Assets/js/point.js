@@ -89,8 +89,16 @@ Mautic.pointTriggerEventOnLoad = function (container, response) {
 
 Mautic.getPointActionPropertiesForm = function(actionType) {
     Mautic.activateLabelLoadingIndicator('point_type');
-
+    var repetableRowEl = mQuery('input[name="point[repeatable]"]').parent().parent().parent().parent().parent();
+    var i = actionType.indexOf('mautic.idconference.');
+    if (i != -1) {
+        mQuery(repetableRowEl).hide();
+    }
+    else {
+        mQuery(repetableRowEl).show();
+    }
     var query = "action=point:getActionForm&actionType=" + actionType;
+
     mQuery.ajax({
         url: mauticAjaxUrl,
         type: "POST",
