@@ -1,6 +1,7 @@
 //CalendarBundle
 Mautic.calendarOnLoad = function (container) {
     Mautic.loadCalendarEvents(container);
+    mQuery('#calendar').fullCalendar('option', 'locale', 'sl');
 };
 
 Mautic.calendarModalOnLoad = function (container, response) {
@@ -24,7 +25,7 @@ Mautic.initializeCalendarModals = function (container) {
 Mautic.loadCalendarEvents = function (container) {
     mQuery('#calendar').fullCalendar({
         events: mauticAjaxUrl + "?action=calendar:generateData",
-        lang: 'en',
+        lang: 'sl',
         eventLimit: true,
         eventLimitText: "more",
         eventRender: function(event, element) {

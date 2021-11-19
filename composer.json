@@ -114,7 +114,9 @@
         "phpoffice/phpspreadsheet": "^1.15",
         "predis/predis": "^1.1",
         "composer/installers": "^1.10",
-        "mautic/grapejs-builder": "1.0-RC4"
+        "mautic/grapejs-builder": "1.0-RC4",
+        "mautic/api-library": "^3.0",
+        "sentry/sdk": "^2.2"
     },
     "require-dev": {
         "symfony/web-profiler-bundle": "~3.4.0",
