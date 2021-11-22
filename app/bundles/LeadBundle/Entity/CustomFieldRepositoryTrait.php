@@ -100,7 +100,7 @@ trait CustomFieldRepositoryTrait
             }
         }
 
-        unset($results, $fields);
+        unset($fields);
 
         //get an array of IDs for ORM query
         $ids = array_keys($fieldValues);
