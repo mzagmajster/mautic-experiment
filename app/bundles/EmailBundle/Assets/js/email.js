@@ -70,7 +70,7 @@ Mautic.emailOnLoad = function (container, response) {
 
     if (mQuery('#emailGraphStats').length) {
         mQuery(document).on('click', '#idc-graph-load-btn', function(){
-            var el = document.getElementById('emailGraphStats').innerHTML = '<div class="spinner"><i class="fa fa-spin fa-spinner"></i></div>';
+            mQuery('#emailGraphStatsSpinner').css('display', 'block');
             // Email detail graph - loaded via AJAX not to block loading a whole page
             var graphUrl = mQuery('#emailGraphStats').attr('data-graph-url');
             mQuery("#emailGraphStats").load(graphUrl, function () {
