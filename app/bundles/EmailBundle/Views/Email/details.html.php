@@ -253,7 +253,7 @@ if (!$isEmbedded) {
                 <button type="button" id="idc-graph-load-btn">Load graphs</button>
             </div>
             <div id="emailGraphStats" data-graph-url="<?php echo $view['router']->path('mautic_email_graph_stats', ['objectId' => $email->getId(), 'isVariant' => $isVariant, 'dateFrom' => $dateFrom->format('Y-m-d'), 'dateTo' => $dateTo->format('Y-m-d')]); ?>">
-                <div class="spinner" style="display: none;"><i class="fa fa-spin fa-spinner"></i></div>
+                <div class="spinner" id="emailGraphStatsSpinner" style="display: none;"><i class="fa fa-spin fa-spinner"></i></div>
             </div>
 
             <?php echo $view['content']->getCustomContent('details.stats.graph.below', $mauticTemplateVars); ?>
