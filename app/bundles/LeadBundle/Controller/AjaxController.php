@@ -472,7 +472,13 @@ class AjaxController extends CommonAjaxController
                 ]
             );
 
-            $lead = $dnc->getLead();
+            if ($dnc) {
+                $lead = $dnc->getLead();
+            }
+            else {
+                $lead = null;
+            }
+            
             if ($lead) {
                 // Use lead model to trigger listeners
                 $doNotContact->removeDncForContact($lead->getId(), 'email');
